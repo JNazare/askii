@@ -5,6 +5,7 @@ import os
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import keys
+import time
 
 ### MONGO CONNECTION ###
 def connect():
@@ -224,6 +225,7 @@ def answer_question(user_id, question_id):
     user_questions = user["questions"]
     already_answered_question = user_questions.get(question_id, None)
 
+    updated_question = {}
     if not request.json:
         abort(400)
     if 'answer' in request.json and type(request.json['answer']) != unicode:
@@ -231,11 +233,22 @@ def answer_question(user_id, question_id):
     if request.json.get('answer', None) != None:
         answer = bool(int(request.json['answer']))
         if already_answered_question == None:
-            calculate_difficulty(answer, int(question.get("difficulty", 0)))
+            updated_question["difficulty"] = calculate_difficulty(answer, int(question.get("difficulty", 0)))
+            updated_question["total_times_answered"] = 1
+            if answer == True:
+                updated_question["total_times_answered_correctly"] = 1
+            else:
+                updated_question["total_times_answered_correctly"] = 0
         else:
-            calculate_difficulty(answer, int(user_questions[question_id]["difficulty"]))
+            updated_question["difficulty"] = calculate_difficulty(answer, int(already_answered_question["difficulty"]))
+            updated_question["total_times_answered"] = int(already_answered_question["difficulty"])+1
+            if answer == True:
+                updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])+1
+        updated_question["time_question_last_seen"] = time.time()
+        print updated_question
     else:
         abort(404)
+
     return 'done'
 
 
