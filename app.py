@@ -6,15 +6,14 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 import keys
 
+### MONGO CONNECTION ###
 def connect():
-# Substitute the 5 pieces of information you got when creating
-# the Mongo DB Database (underlined in red in the screenshots)
-# Obviously, do not store your password as plaintext in practice
     mongo_keys = keys.mongoKeys()
     connection = MongoClient(mongo_keys[0],mongo_keys[1])
     handle = connection[mongo_keys[2]]
     handle.authenticate(mongo_keys[3],mongo_keys[4])
     return handle
+
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -41,6 +40,19 @@ def make_public_user(user):
         else:
             new_user[field] = user[field]
     return new_user
+
+def calculate_difficulty(bool_answer, current_difficulty):
+    int_answer = -1
+    if bool_answer == False:
+        int_answer = 1
+    if current_difficulty >= 4 and int_answer > 0:
+        pass
+    elif current_difficulty <= 1 and int_answer < 1:
+        pass
+    else:
+        current_difficulty = current_difficulty + int_answer
+    print current_difficulty
+    return current_difficulty
 
 #### AUTHORIZATION FUNCTIONS ###
 @auth.get_password
@@ -79,14 +91,26 @@ def create_question():
     '''Create new question and append to end of question list'''
     if not request.json or not 'question' in request.json:
         abort(400)
+    order_obj = handle.order.find()[0]
+    order_id = order_obj["_id"]
+    order_list = order_obj["order"]
     question = {
         'question': request.json['question'],
         'answer': request.json.get('answer', ""),
         'content': request.json.get('content', ""),
         'hint': request.json.get('hint', ""),
-        'regex': request.json.get('regex', "")
+        'regex': request.json.get('regex', ""),
+        'difficulty': request.json.get('difficulty', 0)
     }
     handle.questions.insert(question)
+    index = request.json.get('index', None)
+    if index == None:
+        order_list.append(unicode(question["_id"]))
+    else:
+        order_list.insert(index, unicode(question["_id"]))
+    writeResponse = handle.order.update({"_id": ObjectId(unicode(order_id))}, {"order": order_list})
+    if int(writeResponse.get('nModified', 0)) == 0:
+        abort(404)
     return jsonify({'question': make_public_question(question)}), 201
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['PUT'])
@@ -157,7 +181,8 @@ def create_user():
     if not request.json or not 'name' in request.json:
         abort(400)
     user = {
-        'name': request.json['name']
+        'name': request.json['name'],
+        'questions' : {}
     }
     handle.users.insert(user)
     return jsonify({'user': make_public_user(user)}), 201
@@ -188,6 +213,30 @@ def delete_user(user_id):
     if int(deleteResponse.get('n', 0)) == 0:
         abort(404)
     return jsonify({'result': True})
+
+
+### GET AND ANSWER QUESTIONS ###
+@app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['PUT'])
+@auth.login_required
+def answer_question(user_id, question_id):
+    user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
+    question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+    user_questions = user["questions"]
+    already_answered_question = user_questions.get(question_id, None)
+
+    if not request.json:
+        abort(400)
+    if 'answer' in request.json and type(request.json['answer']) != unicode:
+        abort(400)
+    if request.json.get('answer', None) != None:
+        answer = bool(int(request.json['answer']))
+        if already_answered_question == None:
+            calculate_difficulty(answer, int(question.get("difficulty", 0)))
+        else:
+            calculate_difficulty(answer, int(user_questions[question_id]["difficulty"]))
+    else:
+        abort(404)
+    return 'done'
 
 
 ### ERROR HANDLING ###
