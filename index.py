@@ -108,13 +108,13 @@ def hello_askii():
 
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
-@auth.login_required
+#@auth.login_required
 def get_questions():
     '''Get a list of all questions'''
     return jsonify({'questions': [make_public_question(question) for question in handle.questions.find()]})
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['GET'])
-@auth.login_required
+#@auth.login_required
 def get_question(question_id):
     '''Get a question by _id'''
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
@@ -123,7 +123,7 @@ def get_question(question_id):
     return jsonify({'question': make_public_question(question)})
 
 @app.route('/askii/api/v1.0/questions', methods=['POST'])
-@auth.login_required
+#@auth.login_required
 def create_question():
     '''Create new question and append to end of question list'''
     if not request.json or not 'question' in request.json:
@@ -151,7 +151,7 @@ def create_question():
     return jsonify({'question': make_public_question(question)}), 201
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['PUT'])
-@auth.login_required
+#@auth.login_required
 def update_question(question_id):
     '''Update a question by _id'''
     updated_question_fields = {}
@@ -186,7 +186,7 @@ def update_question(question_id):
     return jsonify({'question': make_public_question(question)})
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['DELETE'])
-@auth.login_required
+#@auth.login_required
 def delete_question(question_id):
     '''Delete a question by _id'''
     deleteResponse = handle.questions.remove({"_id": ObjectId(unicode(question_id))})
@@ -196,14 +196,14 @@ def delete_question(question_id):
 
 # USER FUNCTIONS
 @app.route('/askii/api/v1.0/users', methods=['GET'])
-@auth.login_required
+#@auth.login_required
 def get_users():
     '''Get a list of all users'''
     # return jsonify({'questions': [make_public_question(question) for question in handle.questions.find()]})
     return jsonify({'users': [make_public_user(user) for user in handle.users.find()]})
 
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['GET'])
-@auth.login_required
+#@auth.login_required
 def get_user(user_id):
     '''Get a user by _id'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
@@ -212,7 +212,7 @@ def get_user(user_id):
     return jsonify({'user': make_public_user(user)})
 
 @app.route('/askii/api/v1.0/users', methods=['POST'])
-@auth.login_required
+#@auth.login_required
 def create_user():
     '''Create new user and append to end of user list'''
     if not request.json or not 'name' in request.json:
@@ -226,7 +226,7 @@ def create_user():
 
 ####### changed
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['POST'])
-@auth.login_required
+#@auth.login_required
 def update_user(user_id):
     '''Update a user by _id'''
     updated_user_fields = {}
@@ -243,7 +243,7 @@ def update_user(user_id):
     return jsonify({'user': make_public_user(updated_user_fields)})
 
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['DELETE'])
-@auth.login_required
+#@auth.login_required
 def delete_user(user_id):
     '''Delete a user by _id'''
     deleteResponse = handle.users.remove({"_id": ObjectId(unicode(user_id))})
@@ -255,7 +255,7 @@ def delete_user(user_id):
 ### ANSWER QUESTION ###
 ####### changed
 @app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['POST'])
-@auth.login_required
+#@auth.login_required
 def answer_question(user_id, question_id):
     '''Takes in user_id, question_id, and answer in '1' and '0' for right and wrong'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
@@ -295,7 +295,7 @@ def answer_question(user_id, question_id):
 
 ### GET NEXT QUESTION ###
 @app.route('/askii/api/v1.0/next/<user_id>', methods=['POST'])
-@auth.login_required
+#@auth.login_required
 def get_next_question(user_id):
     '''Takes in a user_id and a count(total number of questions answered this session)'''
     order_obj = handle.order.find()[0]
@@ -336,7 +336,7 @@ def get_next_question(user_id):
 
 ### ERROR HANDLING ###
 @app.errorhandler(404)
-@auth.login_required
+#@auth.login_required
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
 
