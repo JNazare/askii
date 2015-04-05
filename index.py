@@ -145,7 +145,7 @@ def create_question():
         order_list.append(unicode(question["_id"]))
     else:
         order_list.insert(index, unicode(question["_id"]))
-    writeResponse = handle.order.update({"_id": ObjectId(unicode(order_id))}, {"order": order_list})
+    writeResponse = handle.order.update({"_id": ObjectId(unicode(order_id))}, {'$set': {"order": order_list}})
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
     return jsonify({'question': make_public_question(question)}), 201
@@ -178,7 +178,7 @@ def update_question(question_id):
         updated_question_fields['hint'] = request.json['hint']
     if request.json.get('regex', None) != None:
         updated_question_fields['regex'] = request.json['regex']
-    writeResponse = handle.questions.update({"_id": ObjectId(unicode(question_id))}, updated_question_fields)
+    writeResponse = handle.questions.update({"_id": ObjectId(unicode(question_id))}, {'$set': updated_question_fields})
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
     question = updated_question_fields.copy()
@@ -215,10 +215,11 @@ def get_user(user_id):
 #@auth.login_required
 def create_user():
     '''Create new user and append to end of user list'''
-    if not request.json or not 'name' in request.json:
+    if not request.json or not 'phone_num' in request.json:
         abort(400)
     user = {
-        'name': request.json['name'],
+        'phone_num': request.json['phone_num'],
+        'name': request.json.get('name', ""),
         'questions' : {}
     }
     handle.users.insert(user)
@@ -232,11 +233,15 @@ def update_user(user_id):
     updated_user_fields = {}
     if not request.json:
         abort(400)
+    if 'phone_num' in request.json and type(request.json['phone_num']) != unicode:
+        abort(400)
     if 'name' in request.json and type(request.json['name']) != unicode:
         abort(400)
+    if request.json.get('phone_num', None) != None:
+        updated_user_fields['phone_num'] = request.json['phone_num']
     if request.json.get('name', None) != None:
         updated_user_fields['name'] = request.json['name']
-    writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, updated_user_fields)
+    writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {'$set': updated_user_fields})
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
     updated_user_fields.update({"_id": user_id})
@@ -285,7 +290,7 @@ def answer_question(user_id, question_id):
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])
         updated_question["time_question_last_seen"] = time.time()
         user_questions[question_id]=updated_question
-        writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {"questions": user_questions})
+        writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {'$set': {"questions": user_questions}})
         if int(writeResponse.get('nModified', 0)) == 0:
             abort(404)
         user.update({"questions": user_questions})
