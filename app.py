@@ -6,6 +6,8 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 import keys
 import time
+import numpy as np
+import random
 
 ### MONGO CONNECTION ###
 def connect():
@@ -46,7 +48,7 @@ def calculate_difficulty(bool_answer, current_difficulty):
     int_answer = -1
     if bool_answer == False:
         int_answer = 1
-    if current_difficulty >= 4 and int_answer > 0:
+    if current_difficulty >= 3 and int_answer > 0:
         pass
     elif current_difficulty <= 0 and int_answer < 1:
         pass
@@ -54,6 +56,43 @@ def calculate_difficulty(bool_answer, current_difficulty):
         current_difficulty = current_difficulty + int_answer
     print current_difficulty
     return current_difficulty
+
+def probabilityOfNewQuestion(prob_new):
+    prob_review = 1.0 - prob_new
+    weighted_choices = [(True, prob_new), (False, prob_review)]
+    choices, weights = zip(*weighted_choices)
+    return np.random.choice(choices, p=weights)
+
+def leitnerBoxSelection(possible_review_questions):
+
+    # for question_id in possible_review_questions:
+    #     question_val = possible_review_questions[question_id]
+    #     question_difficulty = int(question_val["difficulty"])
+    #     if question_difficulty == 0:
+
+    # print int(possible_review_questions['552042ab52546f0df6aeee61']['difficulty'])
+    
+    easy_weight = 0.1
+    medium_weight = 0.2
+    hard_weight = 0.3
+    very_hard_weight = 0.4
+    
+    easy_questions = [q for q,v in possible_review_questions.iteritems() if int(v["difficulty"])==0] # get all questions with 0 difficulty
+    medium_questions = [q for q,v in possible_review_questions.iteritems() if int(v["difficulty"])==1]
+    hard_questions = [q for q,v in possible_review_questions.iteritems() if int(v["difficulty"])==2]
+    very_hard_questions = [q for q,v in possible_review_questions.iteritems() if int(v["difficulty"])==3]
+
+
+    weighted_choices = [(easy_questions, easy_weight), (medium_questions, medium_weight), 
+                        (hard_questions, hard_weight), (very_hard_questions, very_hard_weight)]
+    
+    choices, weights = zip(*weighted_choices)
+    
+    chosen_question_catagory = []
+    while len(chosen_question_catagory) == 0:
+        chosen_question_catagory = np.random.choice(choices, p=weights)
+
+    return random.choice(chosen_question_catagory) # returns row index of question to review
 
 #### AUTHORIZATION FUNCTIONS ###
 @auth.get_password
@@ -225,7 +264,6 @@ def answer_question(user_id, question_id):
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
     user_questions = user["questions"]
     already_answered_question = user_questions.get(question_id, None)
-
     updated_question = {}
     if not request.json:
         abort(400)
@@ -255,9 +293,48 @@ def answer_question(user_id, question_id):
         user.update({"questions": user_questions})
     else:
         abort(404)
-
     return jsonify(make_public_user(user))
 
+### GET NEXT QUESTION ###
+@app.route('/askii/api/v1.0/next/<user_id>', methods=['POST'])
+@auth.login_required
+def get_next_question(user_id):
+    '''Takes in a user_id and a count(total number of questions answered this session)'''
+    order_obj = handle.order.find()[0]
+    order_id = order_obj["_id"]
+    order_list = order_obj["order"]
+    user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
+    user_questions = user["questions"]
+    already_answered_questions = set(user_questions.keys())
+    unanswered_questions = [q for q in order_list if q not in already_answered_questions]
+    # need to get the set of questions that are in order but not in the review dictionary
+    if int(request.json.get('count', 0)) == 0 and len(unanswered_questions) != 0:
+        # first question of the session, new question is required
+        question_id = unanswered_questions[0]
+        question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+        if question == None:
+            abort(404)
+    elif len(unanswered_questions) != 0:
+        # not the first question and there are still new questions, can get either a new or review question
+        type_question = probabilityOfNewQuestion(0.5)
+        if type_question == True:
+            question_id = unanswered_questions[0]
+            question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+            if question == None:
+                abort(404)
+        else:
+            # review question, use leitner box
+            question_id = leitnerBoxSelection(user_questions)
+            question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+            if question == None:
+                abort(404)
+    else:
+        # treat all questions as review questions... no themes yet
+        question_id = leitnerBoxSelection(user_questions)
+        question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+        if question == None:
+            abort(404)
+    return jsonify(make_public_question(question))
 
 ### ERROR HANDLING ###
 @app.errorhandler(404)
