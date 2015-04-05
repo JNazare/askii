@@ -64,13 +64,6 @@ def probabilityOfNewQuestion(prob_new):
     return np.random.choice(choices, p=weights)
 
 def leitnerBoxSelection(possible_review_questions):
-
-    # for question_id in possible_review_questions:
-    #     question_val = possible_review_questions[question_id]
-    #     question_difficulty = int(question_val["difficulty"])
-    #     if question_difficulty == 0:
-
-    # print int(possible_review_questions['552042ab52546f0df6aeee61']['difficulty'])
     
     easy_weight = 0.1
     medium_weight = 0.2
@@ -227,7 +220,8 @@ def create_user():
     handle.users.insert(user)
     return jsonify({'user': make_public_user(user)}), 201
 
-@app.route('/askii/api/v1.0/users/<user_id>', methods=['PUT'])
+####### changed
+@app.route('/askii/api/v1.0/users/<user_id>', methods=['POST'])
 @auth.login_required
 def update_user(user_id):
     '''Update a user by _id'''
@@ -241,9 +235,8 @@ def update_user(user_id):
     writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, updated_user_fields)
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
-    user = updated_user_fields.copy()
-    user.update({"_id": user_id})
-    return jsonify({'user': make_public_user(user)})
+    updated_user_fields.update({"_id": user_id})
+    return jsonify({'user': make_public_user(updated_user_fields)})
 
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['DELETE'])
 @auth.login_required
@@ -256,7 +249,8 @@ def delete_user(user_id):
 
 
 ### ANSWER QUESTION ###
-@app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['PUT'])
+####### changed
+@app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['POST'])
 @auth.login_required
 def answer_question(user_id, question_id):
     '''Takes in user_id, question_id, and answer in '1' and '0' for right and wrong'''
