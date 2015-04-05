@@ -48,7 +48,7 @@ def calculate_difficulty(bool_answer, current_difficulty):
         int_answer = 1
     if current_difficulty >= 4 and int_answer > 0:
         pass
-    elif current_difficulty <= 1 and int_answer < 1:
+    elif current_difficulty <= 0 and int_answer < 1:
         pass
     else:
         current_difficulty = current_difficulty + int_answer
@@ -216,10 +216,11 @@ def delete_user(user_id):
     return jsonify({'result': True})
 
 
-### GET AND ANSWER QUESTIONS ###
+### ANSWER QUESTION ###
 @app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['PUT'])
 @auth.login_required
 def answer_question(user_id, question_id):
+    '''Takes in user_id, question_id, and answer in '1' and '0' for right and wrong'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
     user_questions = user["questions"]
@@ -241,11 +242,16 @@ def answer_question(user_id, question_id):
                 updated_question["total_times_answered_correctly"] = 0
         else:
             updated_question["difficulty"] = calculate_difficulty(answer, int(already_answered_question["difficulty"]))
-            updated_question["total_times_answered"] = int(already_answered_question["difficulty"])+1
+            updated_question["total_times_answered"] = int(already_answered_question["total_times_answered"])+1
             if answer == True:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])+1
+            else:
+                updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])
         updated_question["time_question_last_seen"] = time.time()
-        print updated_question
+        user_questions[question_id]=updated_question
+        writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {"questions": user_questions})
+        if int(writeResponse.get('nModified', 0)) == 0:
+            abort(404)
     else:
         abort(404)
 
