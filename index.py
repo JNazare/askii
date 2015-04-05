@@ -80,12 +80,12 @@ def leitnerBoxSelection(possible_review_questions):
                         (hard_questions, hard_weight), (very_hard_questions, very_hard_weight)]
     
     choices, weights = zip(*weighted_choices)
-    
+
     chosen_question_catagory = []
     while len(chosen_question_catagory) == 0:
         chosen_question_catagory = np.random.choice(choices, p=weights)
 
-    return random.choice(chosen_question_catagory) # returns row index of question to review
+    return random.choice(chosen_question_catagory)
 
 #### AUTHORIZATION FUNCTIONS ###
 @auth.get_password
@@ -327,16 +327,28 @@ def get_next_question(user_id):
                 abort(404)
         else:
             # review question, use leitner box
+            if len(user_questions) != 0:
+                question_id = leitnerBoxSelection(user_questions)
+                question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+                if question == None:
+                    abort(404)
+            else:
+                question_id = unanswered_questions[0]
+                question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+                if question == None:
+                    abort(404) 
+    else:
+        # treat all questions as review questions... no themes yet
+        if len(user_questions) != 0:
             question_id = leitnerBoxSelection(user_questions)
             question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
             if question == None:
                 abort(404)
-    else:
-        # treat all questions as review questions... no themes yet
-        question_id = leitnerBoxSelection(user_questions)
-        question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
-        if question == None:
-            abort(404)
+        else:
+            question_id = unanswered_questions[0]
+            question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+            if question == None:
+                abort(404) 
     return jsonify(make_public_question(question))
 
 ### ERROR HANDLING ###
