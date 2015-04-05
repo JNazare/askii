@@ -252,10 +252,11 @@ def answer_question(user_id, question_id):
         writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {"questions": user_questions})
         if int(writeResponse.get('nModified', 0)) == 0:
             abort(404)
+        user.update({"questions": user_questions})
     else:
         abort(404)
 
-    return 'done'
+    return jsonify(make_public_user(user))
 
 
 ### ERROR HANDLING ###
