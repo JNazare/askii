@@ -102,6 +102,10 @@ def unauthorized():
 
 #### ROUTES ####
 
+@app.route('/')
+def hello_askii():
+    return 'Welcome to Askii'
+
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
 @auth.login_required
