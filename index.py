@@ -208,7 +208,16 @@ def get_user(user_id):
     '''Get a user by _id'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
     if user == None:
-        abort(404)
+        return jsonify({'result': False})
+    return jsonify({'user': make_public_user(user)})
+
+@app.route('/askii/api/v1.0/users/phone_num/<phone_num>', methods=['GET'])
+#@auth.login_required
+def get_user_by_phone_num(phone_num):
+    '''Get a user by phone_num'''
+    user = handle.users.find_one({"phone_num": phone_num})
+    if user == None:
+        return jsonify({'result': False})
     return jsonify({'user': make_public_user(user)})
 
 @app.route('/askii/api/v1.0/users', methods=['POST'])
