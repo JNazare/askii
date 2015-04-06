@@ -189,9 +189,17 @@ def update_question(question_id):
 #@auth.login_required
 def delete_question(question_id):
     '''Delete a question by _id'''
+    order_obj = handle.order.find()[0]
+    order_id = order_obj["_id"]
+    order_list = order_obj["order"]
     deleteResponse = handle.questions.remove({"_id": ObjectId(unicode(question_id))})
     if int(deleteResponse.get('n', 0)) == 0:
         abort(404)
+    if question_id in order_list:
+        order_list.remove(question_id)
+        writeResponse = handle.order.update({"_id": ObjectId(unicode(order_id))}, {'$set': {"order": order_list}})
+        if int(writeResponse.get('nModified', 0)) == 0:
+            abort(404)
     return jsonify({'result': True})
 
 # USER FUNCTIONS
