@@ -64,6 +64,13 @@ def probabilityOfNewQuestion(prob_new):
     return np.random.choice(choices, p=weights)
 
 def leitnerBoxSelection(possible_review_questions):
+
+    # for question_id in possible_review_questions:
+    #     question_val = possible_review_questions[question_id]
+    #     question_difficulty = int(question_val["difficulty"])
+    #     if question_difficulty == 0:
+
+    # print int(possible_review_questions['552042ab52546f0df6aeee61']['difficulty'])
     
     easy_weight = 0.1
     medium_weight = 0.2
@@ -80,12 +87,12 @@ def leitnerBoxSelection(possible_review_questions):
                         (hard_questions, hard_weight), (very_hard_questions, very_hard_weight)]
     
     choices, weights = zip(*weighted_choices)
-
+    
     chosen_question_catagory = []
     while len(chosen_question_catagory) == 0:
         chosen_question_catagory = np.random.choice(choices, p=weights)
 
-    return random.choice(chosen_question_catagory)
+    return random.choice(chosen_question_catagory) # returns row index of question to review
 
 #### AUTHORIZATION FUNCTIONS ###
 @auth.get_password
@@ -102,19 +109,15 @@ def unauthorized():
 
 #### ROUTES ####
 
-@app.route('/')
-def hello_askii():
-    return 'Welcome to Askii'
-
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
-#@auth.login_required
+@auth.login_required
 def get_questions():
     '''Get a list of all questions'''
     return jsonify({'questions': [make_public_question(question) for question in handle.questions.find()]})
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['GET'])
-#@auth.login_required
+@auth.login_required
 def get_question(question_id):
     '''Get a question by _id'''
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
@@ -123,7 +126,7 @@ def get_question(question_id):
     return jsonify({'question': make_public_question(question)})
 
 @app.route('/askii/api/v1.0/questions', methods=['POST'])
-#@auth.login_required
+@auth.login_required
 def create_question():
     '''Create new question and append to end of question list'''
     if not request.json or not 'question' in request.json:
@@ -145,13 +148,13 @@ def create_question():
         order_list.append(unicode(question["_id"]))
     else:
         order_list.insert(index, unicode(question["_id"]))
-    writeResponse = handle.order.update({"_id": ObjectId(unicode(order_id))}, {'$set': {"order": order_list}})
+    writeResponse = handle.order.update({"_id": ObjectId(unicode(order_id))}, {"order": order_list})
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
     return jsonify({'question': make_public_question(question)}), 201
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['PUT'])
-#@auth.login_required
+@auth.login_required
 def update_question(question_id):
     '''Update a question by _id'''
     updated_question_fields = {}
@@ -178,7 +181,7 @@ def update_question(question_id):
         updated_question_fields['hint'] = request.json['hint']
     if request.json.get('regex', None) != None:
         updated_question_fields['regex'] = request.json['regex']
-    writeResponse = handle.questions.update({"_id": ObjectId(unicode(question_id))}, {'$set': updated_question_fields})
+    writeResponse = handle.questions.update({"_id": ObjectId(unicode(question_id))}, updated_question_fields)
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
     question = updated_question_fields.copy()
@@ -186,86 +189,64 @@ def update_question(question_id):
     return jsonify({'question': make_public_question(question)})
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['DELETE'])
-#@auth.login_required
+@auth.login_required
 def delete_question(question_id):
     '''Delete a question by _id'''
-    order_obj = handle.order.find()[0]
-    order_id = order_obj["_id"]
-    order_list = order_obj["order"]
     deleteResponse = handle.questions.remove({"_id": ObjectId(unicode(question_id))})
     if int(deleteResponse.get('n', 0)) == 0:
         abort(404)
-    if question_id in order_list:
-        order_list.remove(question_id)
-        writeResponse = handle.order.update({"_id": ObjectId(unicode(order_id))}, {'$set': {"order": order_list}})
-        if int(writeResponse.get('nModified', 0)) == 0:
-            abort(404)
     return jsonify({'result': True})
 
 # USER FUNCTIONS
 @app.route('/askii/api/v1.0/users', methods=['GET'])
-#@auth.login_required
+@auth.login_required
 def get_users():
     '''Get a list of all users'''
     # return jsonify({'questions': [make_public_question(question) for question in handle.questions.find()]})
     return jsonify({'users': [make_public_user(user) for user in handle.users.find()]})
 
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['GET'])
-#@auth.login_required
+@auth.login_required
 def get_user(user_id):
     '''Get a user by _id'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
     if user == None:
-        return jsonify({'user': False})
-    return jsonify({'user': make_public_user(user)})
-
-@app.route('/askii/api/v1.0/users/phone_num/<phone_num>', methods=['GET'])
-#@auth.login_required
-def get_user_by_phone_num(phone_num):
-    '''Get a user by phone_num'''
-    user = handle.users.find_one({"phone_num": phone_num})
-    if user == None:
-        return jsonify({'user': False})
+        abort(404)
     return jsonify({'user': make_public_user(user)})
 
 @app.route('/askii/api/v1.0/users', methods=['POST'])
-#@auth.login_required
+@auth.login_required
 def create_user():
     '''Create new user and append to end of user list'''
-    if not request.json or not 'phone_num' in request.json:
+    if not request.json or not 'name' in request.json:
         abort(400)
     user = {
-        'phone_num': request.json['phone_num'],
-        'name': request.json.get('name', ""),
+        'name': request.json['name'],
         'questions' : {}
     }
     handle.users.insert(user)
     return jsonify({'user': make_public_user(user)}), 201
 
-####### changed
-@app.route('/askii/api/v1.0/users/<user_id>', methods=['POST'])
-#@auth.login_required
+@app.route('/askii/api/v1.0/users/<user_id>', methods=['PUT'])
+@auth.login_required
 def update_user(user_id):
     '''Update a user by _id'''
     updated_user_fields = {}
     if not request.json:
         abort(400)
-    if 'phone_num' in request.json and type(request.json['phone_num']) != unicode:
-        abort(400)
     if 'name' in request.json and type(request.json['name']) != unicode:
         abort(400)
-    if request.json.get('phone_num', None) != None:
-        updated_user_fields['phone_num'] = request.json['phone_num']
     if request.json.get('name', None) != None:
         updated_user_fields['name'] = request.json['name']
-    writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {'$set': updated_user_fields})
+    writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, updated_user_fields)
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
-    updated_user_fields.update({"_id": user_id})
-    return jsonify({'user': make_public_user(updated_user_fields)})
+    user = updated_user_fields.copy()
+    user.update({"_id": user_id})
+    return jsonify({'user': make_public_user(user)})
 
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['DELETE'])
-#@auth.login_required
+@auth.login_required
 def delete_user(user_id):
     '''Delete a user by _id'''
     deleteResponse = handle.users.remove({"_id": ObjectId(unicode(user_id))})
@@ -275,9 +256,8 @@ def delete_user(user_id):
 
 
 ### ANSWER QUESTION ###
-####### changed
-@app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['POST'])
-#@auth.login_required
+@app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['PUT'])
+@auth.login_required
 def answer_question(user_id, question_id):
     '''Takes in user_id, question_id, and answer in '1' and '0' for right and wrong'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
@@ -290,33 +270,24 @@ def answer_question(user_id, question_id):
     if 'answer' in request.json and type(request.json['answer']) != unicode:
         abort(400)
     if request.json.get('answer', None) != None:
-        #grab the answer from the json request. Right now it's a boolean value, but shouldn't be.
         answer = bool(int(request.json['answer']))
-        #if the question hasn't been answered before:
         if already_answered_question == None:
-            #update question difficulty
             updated_question["difficulty"] = calculate_difficulty(answer, int(question.get("difficulty", 0)))
-            #update times question was answered to 1.
             updated_question["total_times_answered"] = 1
-            #check if they answered it correctly. Currently a boolean check:
             if answer == True:
                 updated_question["total_times_answered_correctly"] = 1
             else:
                 updated_question["total_times_answered_correctly"] = 0
-        #if the answer has been answered before:
         else:
-            #update the question's difficulty and how many times it was answered:
             updated_question["difficulty"] = calculate_difficulty(answer, int(already_answered_question["difficulty"]))
             updated_question["total_times_answered"] = int(already_answered_question["total_times_answered"])+1
-            #checking if they answered it correctly. Currently a boolean check:
             if answer == True:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])+1
             else:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])
-        #update when question was last seen:
         updated_question["time_question_last_seen"] = time.time()
         user_questions[question_id]=updated_question
-        writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {'$set': {"questions": user_questions}})
+        writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {"questions": user_questions})
         if int(writeResponse.get('nModified', 0)) == 0:
             abort(404)
         user.update({"questions": user_questions})
@@ -326,7 +297,7 @@ def answer_question(user_id, question_id):
 
 ### GET NEXT QUESTION ###
 @app.route('/askii/api/v1.0/next/<user_id>', methods=['POST'])
-#@auth.login_required
+@auth.login_required
 def get_next_question(user_id):
     '''Takes in a user_id and a count(total number of questions answered this session)'''
     order_obj = handle.order.find()[0]
@@ -353,36 +324,23 @@ def get_next_question(user_id):
                 abort(404)
         else:
             # review question, use leitner box
-            if len(user_questions) != 0:
-                question_id = leitnerBoxSelection(user_questions)
-                question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
-                if question == None:
-                    abort(404)
-            else:
-                question_id = unanswered_questions[0]
-                question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
-                if question == None:
-                    abort(404) 
-    else:
-        # treat all questions as review questions... no themes yet
-        if len(user_questions) != 0:
             question_id = leitnerBoxSelection(user_questions)
             question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
             if question == None:
                 abort(404)
-        else:
-            question_id = unanswered_questions[0]
-            question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
-            if question == None:
-                abort(404) 
+    else:
+        # treat all questions as review questions... no themes yet
+        question_id = leitnerBoxSelection(user_questions)
+        question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+        if question == None:
+            abort(404)
     return jsonify(make_public_question(question))
 
 ### ERROR HANDLING ###
 @app.errorhandler(404)
-#@auth.login_required
+@auth.login_required
 def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(debug=True)
