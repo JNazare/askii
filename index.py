@@ -303,6 +303,7 @@ def answer_question(user_id, question_id):
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
     user_questions = user["questions"]
     already_answered_question = user_questions.get(question_id, None)
+    regex_eval = False
     updated_question = {}
     if not request.json:
         abort(400)
@@ -335,7 +336,7 @@ def answer_question(user_id, question_id):
         user.update({"questions": user_questions})
     else:
         abort(404)
-    return jsonify(make_public_user(user))
+    return jsonify({"result": regex_eval})
 
 ### GET NEXT QUESTION ###
 @app.route('/askii/api/v1.0/next/<user_id>', methods=['POST'])
