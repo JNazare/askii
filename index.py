@@ -8,6 +8,7 @@ import keys
 import time
 import numpy as np
 import random
+import re
 
 ### MONGO CONNECTION ###
 def connect():
@@ -86,6 +87,12 @@ def leitnerBoxSelection(possible_review_questions):
         chosen_question_catagory = np.random.choice(choices, p=weights)
 
     return random.choice(chosen_question_catagory)
+
+def checkRegex(regex_str, answer):
+    regex_obj = re.compile(regex_str, re.IGNORECASE)
+    if regex_obj.search(str(answer)) != None:
+        return True
+    return False
 
 #### AUTHORIZATION FUNCTIONS ###
 @auth.get_password
@@ -290,26 +297,22 @@ def answer_question(user_id, question_id):
     if 'answer' in request.json and type(request.json['answer']) != unicode:
         abort(400)
     if request.json.get('answer', None) != None:
-        #grab the answer from the json request. Right now it's a boolean value, but shouldn't be.
-        answer = bool(int(request.json['answer']))
-        #if the question hasn't been answered before:
+        # answer = bool(int(request.json['answer']))
+        answer = request.json['answer']
+        regex_str = question["regex"]
+        regex_eval = checkRegex(regex_str, answer)
         if already_answered_question == None:
-            #update question difficulty
-            updated_question["difficulty"] = calculate_difficulty(answer, int(question.get("difficulty", 0)))
-            #update times question was answered to 1.
+            updated_question["difficulty"] = calculate_difficulty(regex_eval, int(question.get("difficulty", 0)))
             updated_question["total_times_answered"] = 1
-            #check if they answered it correctly. Currently a boolean check:
-            if answer == True:
+            if regex_eval == True:
                 updated_question["total_times_answered_correctly"] = 1
             else:
                 updated_question["total_times_answered_correctly"] = 0
         #if the answer has been answered before:
         else:
-            #update the question's difficulty and how many times it was answered:
-            updated_question["difficulty"] = calculate_difficulty(answer, int(already_answered_question["difficulty"]))
+            updated_question["difficulty"] = calculate_difficulty(regex_eval, int(already_answered_question["difficulty"]))
             updated_question["total_times_answered"] = int(already_answered_question["total_times_answered"])+1
-            #checking if they answered it correctly. Currently a boolean check:
-            if answer == True:
+            if regex_eval == True:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])+1
             else:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])
