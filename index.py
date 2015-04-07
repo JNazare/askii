@@ -308,7 +308,6 @@ def answer_question(user_id, question_id):
                 updated_question["total_times_answered_correctly"] = 1
             else:
                 updated_question["total_times_answered_correctly"] = 0
-        #if the answer has been answered before:
         else:
             updated_question["difficulty"] = calculate_difficulty(regex_eval, int(already_answered_question["difficulty"]))
             updated_question["total_times_answered"] = int(already_answered_question["total_times_answered"])+1
@@ -316,7 +315,6 @@ def answer_question(user_id, question_id):
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])+1
             else:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])
-        #update when question was last seen:
         updated_question["time_question_last_seen"] = time.time()
         user_questions[question_id]=updated_question
         writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {'$set': {"questions": user_questions}})
