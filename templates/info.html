@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+
+{% block title %}Info{% endblock %}
+{% block content %}
+    {% if question.content.image_url %}
+    	<img src="{{ question.content.image_url }}" width="100%" class="content-image">
+    {% endif %}
+    <p> 
+    	{{ question.content.text }}
+    </p>
+{% endblock %}

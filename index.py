@@ -1,5 +1,5 @@
 #!flask/bin/python
-from flask import Flask, jsonify, abort, make_response, request, url_for
+from flask import Flask, jsonify, abort, make_response, request, url_for, render_template
 from flask.ext.httpauth import HTTPBasicAuth
 import os
 from pymongo import MongoClient
@@ -33,6 +33,7 @@ def make_public_question(question):
             new_question['uri'] = url_for('get_question', question_id=question['_id'], _external=True)
         else:
             new_question[field] = question[field]
+        new_question["info_uri"] = url_for('get_info', question_id=question['_id'], _external=True)
     return new_question
 
 def make_public_user(user):
@@ -112,6 +113,17 @@ def unauthorized():
 @app.route('/')
 def hello_askii():
     return 'Welcome to Askii'
+
+# CONTENT ROUTE
+@app.route('/askii/info/<question_id>', methods=['GET'])
+#@auth.login_required
+def get_info(question_id):
+    question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+    if question == None:
+        abort(404)
+    question = make_public_question(question)
+    return render_template('info.html', question=question)
+    # return jsonify({'question': make_public_question(question)})
 
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
