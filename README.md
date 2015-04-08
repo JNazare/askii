@@ -25,7 +25,7 @@ One this runs, you should be all set to start using Askii.
 ### GET /questions?key=yourAppKey
 Gets a list of all the questions in your Askii database
 
-### GET /questions/<question_id>?key=yourAppKey
+### GET /questions/[question_id]?key=yourAppKey
 Gets a question by ID from your Askii database
 
 ### POST /questions?key=yourAppKey
@@ -46,7 +46,7 @@ _Params:_
 	"regex": "a regex that evaluates the correct answer"
 }
 ```
-### PUT /questions/<question_id>?key=yourAppKey
+### PUT /questions/[question_id]?key=yourAppKey
 Update a question in your Askii database by ID
 
 _Params:_
@@ -56,13 +56,13 @@ _Params:_
 }
 ```
 
-### DELETE /questions/<question_id>?key=yourAppKey
+### DELETE /questions/[question_id]?key=yourAppKey
 Delete a question in your Askii database by ID
 
 ### GET /users?key=yourAppKey
 Gets a list of users in your Askii database
 
-### GET /users/<user_id>?key=yourAppKey
+### GET /users/[user_id]?key=yourAppKey
 Gets a user in your Askii databse by ID
 
 ### POST /users?key=yourAppKey
@@ -76,7 +76,7 @@ _Params:_
 }
 ```
 
-### POST /users/<user_id>?key=yourAppKey
+### POST /users/[user_id]?key=yourAppKey
 Update a user in your Askii databse by ID
 
 _Params:_
@@ -86,10 +86,10 @@ _Params:_
 }
 ```
 
-### DELETE /users/<user_id>?key=yourAppKey
+### DELETE /users/[user_id]?key=yourAppKey
 Delete a users in your Askii database by ID
 
-### POST /users/<user_id>/<question_id>?key=yourAppKey
+### POST /users/[user_id]/[question_id]?key=yourAppKey
 Update a user in your Askii database when a user answers a question
 
 _Params:_
@@ -99,7 +99,7 @@ _Params:_
 }
 ```
 
-### POST /next/<user_id>?key=yourAppKey
+### POST /next/[user_id]?key=yourAppKey
 Fetch the next question for a user to study from
 
 _Params:_
