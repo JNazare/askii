@@ -10,10 +10,10 @@ You can then find your API Key on your Askii dashboard.
 ### Create and Link your MongoDB
 Please create a MongoDB on [MongoLab](https://mongolab.com/). Then please link your MongoLab database to Askii using your Askii dashboard. 
 
-To get the MongoLab fields needed, go to your MongoLab portal. At the top of the homepage for your database, you should see the following shell code.
+To get the MongoLab fields needed, go to your MongoLab portal. At the top of the homepage for your database, you should see the following shell code under the header "To connect using the shell":
 
 ```shell
-To connect using the shell:\n\nmongo <dbsubdomian>.mongolab.com:<dbnumber>/<dbid> -u <dbuser> -p <dbpassword>
+mongo <dbsubdomian>.mongolab.com:<dbnumber>/<dbid> -u <dbuser> -p <dbpassword>
 ```
 
 Please pull out these fields in input them into your Askii dashboard. After doing this, please press the "Setup DB" button on the portal.
