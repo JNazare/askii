@@ -38,8 +38,10 @@ _Params:_
 	"answer": "the correct answer to the question [required]",
 	"difficulty": "a numerical string representing easy (0), medium (1), hard (2), or very hard (3)",
 	"content": 
-		"text": "textual content with the answer to the question embedded",
-		"image_url": "url of an image that may give the answer"
+		{
+			"text": "textual content with the answer to the question embedded",
+			"image_url": "url of an image that may give the answer"
+		}
 	"hint": "a hint to the question",
 	"regex": "a regex that evaluates the correct answer"
 }
