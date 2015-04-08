@@ -41,7 +41,7 @@ _Params:_
 		{
 			"text": "textual content with the answer to the question embedded",
 			"image_url": "url of an image that may give the answer"
-		}
+		},
 	"hint": "a hint to the question",
 	"regex": "a regex that evaluates the correct answer"
 }
