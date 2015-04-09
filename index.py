@@ -411,21 +411,18 @@ def answer_question(user_id, question_id):
     if 'answer' in request.json and type(request.json['answer']) != unicode:
         abort(400)
     if request.json.get('answer', None) != None:
-        # answer = bool(int(request.json['answer']))
-        answer = request.json['answer']
-        regex_str = question["regex"]
-        regex_eval = checkRegex(regex_str, answer)
+        answer = int(request.json['answer'])
         if already_answered_question == None:
             updated_question["difficulty"] = calculate_difficulty(regex_eval, int(question.get("difficulty", 0)))
             updated_question["total_times_answered"] = 1
-            if regex_eval == True:
+            if answer == 1:
                 updated_question["total_times_answered_correctly"] = 1
             else:
                 updated_question["total_times_answered_correctly"] = 0
         else:
             updated_question["difficulty"] = calculate_difficulty(regex_eval, int(already_answered_question["difficulty"]))
             updated_question["total_times_answered"] = int(already_answered_question["total_times_answered"])+1
-            if regex_eval == True:
+            if answer == 1:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])+1
             else:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])
@@ -437,7 +434,7 @@ def answer_question(user_id, question_id):
         user.update({"questions": user_questions})
     else:
         abort(404)
-    return jsonify({"result": regex_eval})
+    return jsonify({"updated_question": updated_question})
 
 ### GET NEXT QUESTION ###
 @app.route('/askii/api/v1.0/next/<user_id>', methods=['POST'])
