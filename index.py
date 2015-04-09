@@ -44,7 +44,7 @@ def connectToCustomDB(request_args):
             customHandle.create_collection("users")
         if "order" not in collection_names:
             customHandle.create_collection("order")
-            writeResponse = customHandle.order.insert({"order": {}})
+            writeResponse = customHandle.order.insert({"order": []})
         if "questions" not in collection_names:
             customHandle.create_collection("questions")
     return customHandle
@@ -224,16 +224,18 @@ def create_question():
         abort(400)
     order_obj = handle.order.find()[0]
     order_id = order_obj["_id"]
-    order_list = order_obj["order"]
+    order_list = order_obj.get("order", [])
     question = {
         'question': request.json['question'],
         'answer': request.json.get('answer', ""),
-        'content': request.json.get('content', ""),
-        'hint': request.json.get('hint', ""),
-        'regex': request.json.get('regex', ""),
         'difficulty': request.json.get('difficulty', 0)
     }
-    handle.questions.insert(question)
+    already_input_fields = set(question.keys())
+    additional_fields = [q for q in request.json if q not in already_input_fields]
+    for field in additional_fields:
+        question[field] = request.json.get(field, "")
+    question_id = handle.questions.insert(question)
+    question["_id"] = question_id
     index = request.json.get('index', None)
     if index == None:
         order_list.append(unicode(question["_id"]))
