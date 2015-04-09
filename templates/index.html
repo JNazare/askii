@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+
+{% block title %}Welcome{% endblock %}
+{% block content %}
+
+<div class="center row">
+    <ul class="tabs" data-tab role="tablist">
+        <li class="tab-title title active" role="presentational" >
+            <a href="#dashboardPanel" role="tab" tabindex="0"aria-selected="false" controls="panel2-2">
+                Dashboard
+            </a>
+        </li>
+    </ul>
+    <div class="tabs-content">
+        <section role="tabpanel" aria-hidden="true" class="content active" id="dashboardPanel">
+          <p>
+          <div class="row">
+            <div class="large-12 columns">
+              <div class="signup-panel">
+                <p class="formattedParagraph">
+                    <strong> API Key: </strong>
+                    <code> {{user.key}} </code>
+                </p>
+                {% if user.dbconfig.length != 0 %}
+                  <p class="formattedParagraph">
+                    <strong> Current Configuration </strong>
+                    <br>
+                    {{user.dbconfig}}
+                  </p>
+                {% endif %}
+                <form>
+                  <div class="row collapse">
+                    <p class="formattedParagraph">
+                      <strong> Configure Database: </strong>
+                      Cut/paste from the MongoLab instructions for "connect using the shell" below
+                    </p>
+                    <div id="js-edit">
+                      <textarea id="js-mongoConfig" placeholder="mongo [dbSubdomian].mongolab.com:[dbPort]/[dbId] -u <dbuser> -p <dbpassword>" name="databaseConfig" rows="3"></textarea>
+                      <button type="button" class="button" id="js-setupdb">Setup DB</button>
+                    </div>
+                </form>
+              </div>
+            </div>
+           </div>
+          </p>
+        </section>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $('#js-setupdb').click(function(){
+    raw_config = $("#js-mongoConfig").val().split(" ")
+    uri = raw_config[1].split(".")
+    subdomain = uri[0]
+    port = uri[2].split("/")[0].split(":")[1]
+    mongoId = uri[2].split("/")[1]
+    username = raw_config[3]
+    password = raw_config[5]
+    data = {"subdomain": subdomain, "port": port, "mongoId": mongoId, "username": username, "password": password}
+    $.post("/setupDB", data, function(data){
+      console.log("db is setup.")
+    })
+  });
+  $('#js-editconfig').click(function(){
+    console.log('clicked');
+    $('#js-edit').toggle()
+  })
+</script>
+{% endblock %}

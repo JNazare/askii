@@ -1,5 +1,5 @@
 #!flask/bin/python
-from flask import Flask, jsonify, abort, make_response, request, url_for, render_template
+from flask import Flask, jsonify, abort, make_response, request, url_for, render_template, redirect, session
 from flask.ext.httpauth import HTTPBasicAuth
 import os
 from pymongo import MongoClient
@@ -9,6 +9,9 @@ import time
 import numpy as np
 import random
 import re
+from functools import wraps
+import base64
+import hashlib
 
 ### MONGO CONNECTION ###
 def connect():
@@ -20,9 +23,23 @@ def connect():
 
 
 app = Flask(__name__)
+app.secret_key = keys.sessionSecret()
 auth = HTTPBasicAuth()
 handle = connect()
 
+def connectToCustomDB(request_args):
+    # Need to initialize a second DB connection for API creators
+    key = request_args.get("key", None)
+    customHandle = None
+    if key:
+        user = handle.askii_users.find_one({"key": key})
+        if user == None:
+            abort(404)
+        dbconfig = user["dbconfig"]
+        connection = MongoClient(dbconfig["subdomain"]+".mongolab.com",int(dbconfig["port"]))
+        customHandle = connection[dbconfig["mongoId"]]
+        customHandle.authenticate(dbconfig["username"], dbconfig["password"])
+    return customHandle
 
 #### HELPER FUNCTIONS ####
 def make_public_question(question):
@@ -95,6 +112,9 @@ def checkRegex(regex_str, answer):
         return True
     return False
 
+def generateAPIKey():
+    return base64.b64encode(hashlib.sha256( str(random.getrandbits(256)) ).digest(), random.choice(['rA','aZ','gQ','hH','hG','aR','DD'])).rstrip('==')
+
 #### AUTHORIZATION FUNCTIONS ###
 @auth.get_password
 def get_password(username):
@@ -108,11 +128,49 @@ def unauthorized():
     return make_response(jsonify({'error': 'Unauthorized access'}), 401)
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("user", None) is None:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
 #### ROUTES ####
 
 @app.route('/')
-def hello_askii():
-    return 'Welcome to Askii'
+@login_required
+def index():
+    return render_template('index.html', user=session["user"])
+
+@app.route('/login', methods=['GET'])
+def login():
+    return render_template('login.html')
+
+@app.route('/login', methods=['POST'])
+def do_login():
+    username = request.form.get("username", None).lower()
+    password = request.form.get("password", None)
+    if [username, password] != keys.authKeys():
+        return redirect(url_for('login', next=request.url))
+    askiiUser = handle.askii_users.find_one({"username": username})
+    if askiiUser == None:
+        askiiUser = {"username": username, "key": generateAPIKey(), "dbconfig": {}}
+        handle.askii_users.insert(askiiUser)
+    if askiiUser.get("_id", None):
+        askiiUser["_id"]=unicode(askiiUser["_id"])
+    session["user"]=askiiUser
+    return redirect(url_for('index', next=request.url))
+
+@app.route('/setupDB', methods=['POST'])
+@login_required
+def setup_database():
+    config_vars = request.form.to_dict()
+    writeResponse = handle.askii_users.update({"_id": ObjectId(unicode(session["user"]["_id"]))}, {'$set': {"dbconfig": config_vars}})
+    if int(writeResponse.get('nModified', 0)) == 0:
+        abort(404)
+    session["user"]["dbconfig"]=config_vars
+    return 'done'
 
 # CONTENT ROUTE
 @app.route('/askii/info/<question_id>', methods=['GET'])
@@ -123,12 +181,14 @@ def get_info(question_id):
         abort(404)
     question = make_public_question(question)
     return render_template('info.html', question=question)
-    # return jsonify({'question': make_public_question(question)})
 
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
 #@auth.login_required
 def get_questions():
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Get a list of all questions'''
     return jsonify({'questions': [make_public_question(question) for question in handle.questions.find()]})
 
@@ -136,6 +196,9 @@ def get_questions():
 #@auth.login_required
 def get_question(question_id):
     '''Get a question by _id'''
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
     if question == None:
         abort(404)
@@ -144,6 +207,9 @@ def get_question(question_id):
 @app.route('/askii/api/v1.0/questions', methods=['POST'])
 #@auth.login_required
 def create_question():
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Create new question and append to end of question list'''
     if not request.json or not 'question' in request.json:
         abort(400)
@@ -172,6 +238,9 @@ def create_question():
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['PUT'])
 #@auth.login_required
 def update_question(question_id):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Update a question by _id'''
     updated_question_fields = {}
     #question = [question for question in questions if question['_id'] == question_id] # get question from mongodb
@@ -207,6 +276,9 @@ def update_question(question_id):
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['DELETE'])
 #@auth.login_required
 def delete_question(question_id):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Delete a question by _id'''
     order_obj = handle.order.find()[0]
     order_id = order_obj["_id"]
@@ -225,6 +297,9 @@ def delete_question(question_id):
 @app.route('/askii/api/v1.0/users', methods=['GET'])
 #@auth.login_required
 def get_users():
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Get a list of all users'''
     # return jsonify({'questions': [make_public_question(question) for question in handle.questions.find()]})
     return jsonify({'users': [make_public_user(user) for user in handle.users.find()]})
@@ -232,6 +307,9 @@ def get_users():
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['GET'])
 #@auth.login_required
 def get_user(user_id):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Get a user by _id'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
     if user == None:
@@ -241,6 +319,9 @@ def get_user(user_id):
 @app.route('/askii/api/v1.0/users/phone_num/<phone_num>', methods=['GET'])
 #@auth.login_required
 def get_user_by_phone_num(phone_num):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Get a user by phone_num'''
     user = handle.users.find_one({"phone_num": phone_num})
     if user == None:
@@ -250,6 +331,9 @@ def get_user_by_phone_num(phone_num):
 @app.route('/askii/api/v1.0/users', methods=['POST'])
 #@auth.login_required
 def create_user():
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Create new user and append to end of user list'''
     if not request.json or not 'phone_num' in request.json:
         abort(400)
@@ -265,6 +349,9 @@ def create_user():
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['POST'])
 #@auth.login_required
 def update_user(user_id):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Update a user by _id'''
     updated_user_fields = {}
     if not request.json:
@@ -286,6 +373,9 @@ def update_user(user_id):
 @app.route('/askii/api/v1.0/users/<user_id>', methods=['DELETE'])
 #@auth.login_required
 def delete_user(user_id):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Delete a user by _id'''
     deleteResponse = handle.users.remove({"_id": ObjectId(unicode(user_id))})
     if int(deleteResponse.get('n', 0)) == 0:
@@ -298,6 +388,9 @@ def delete_user(user_id):
 @app.route('/askii/api/v1.0/users/<user_id>/<question_id>', methods=['POST'])
 #@auth.login_required
 def answer_question(user_id, question_id):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Takes in user_id, question_id, and answer in '1' and '0' for right and wrong'''
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
@@ -342,6 +435,9 @@ def answer_question(user_id, question_id):
 @app.route('/askii/api/v1.0/next/<user_id>', methods=['POST'])
 #@auth.login_required
 def get_next_question(user_id):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
     '''Takes in a user_id and a count(total number of questions answered this session)'''
     order_obj = handle.order.find()[0]
     order_id = order_obj["_id"]

@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block title %}Welcome{% endblock %}
+{% block content %}
+
+<div class="center row">
+    <ul class="tabs" data-tab role="tablist">
+        <li class="tab-title title active" role="presentational" >
+            <a href="#loginPanel" role="tab" tabindex="0"aria-selected="false" controls="panel2-2">
+                Log In
+            </a>
+        </li>
+    </ul>
+    <div class="tabs-content">
+        <section role="tabpanel" aria-hidden="true" class="content active" id="loginPanel">
+          <p>
+          <div class="row">
+            <div class="large-12 columns">
+              <div class="signup-panel">
+                <p class="welcome">
+                    <strong> Welcome to Askii </strong>
+                    <br>
+                    Please login below
+                </p>
+                <form action="/login" method="post">
+                  <div class="row collapse">
+                    <div class="small-2 columns">
+                      <span class="prefix"><i class="fi-mail"></i></span>
+                    </div>
+                    <div class="small-10  columns">
+                      <input type="text" placeholder="Username" name="username">
+                    </div>
+                  </div>
+                  <div class="row collapse">
+                    <div class="small-2 columns ">
+                      <span class="prefix"><i class="fi-lock"></i></span>
+                    </div>
+                    <div class="small-10 columns ">
+                      <input type="text" placeholder="Password" name="password">
+                    </div>
+                  </div>
+                  <button type="submit" class="button">Login</button>
+                </form>
+              </div>
+            </div>
+           </div>
+          </p>
+        </section>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}
