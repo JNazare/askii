@@ -159,7 +159,8 @@ def login():
 def do_login():
     username = request.form.get("username", None).lower()
     password = request.form.get("password", None)
-    if [username, password] != keys.authKeys():
+    # if [username, password] != keys.authKeys():
+    if username not in keys.authUsernames() and password != keys.authPassword():
         return redirect(url_for('login', next=request.url))
     askiiUser = askiiHandle.askii_users.find_one({"username": username})
     if askiiUser == None:
