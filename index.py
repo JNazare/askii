@@ -25,20 +25,28 @@ def connect():
 app = Flask(__name__)
 app.secret_key = keys.sessionSecret()
 auth = HTTPBasicAuth()
-handle = connect()
+askiiHandle = connect()
 
 def connectToCustomDB(request_args):
     # Need to initialize a second DB connection for API creators
     key = request_args.get("key", None)
     customHandle = None
     if key:
-        user = handle.askii_users.find_one({"key": key})
+        user = askiiHandle.askii_users.find_one({"key": key})
         if user == None:
             abort(404)
         dbconfig = user["dbconfig"]
         connection = MongoClient(dbconfig["subdomain"]+".mongolab.com",int(dbconfig["port"]))
         customHandle = connection[dbconfig["mongoId"]]
         customHandle.authenticate(dbconfig["username"], dbconfig["password"])
+        collection_names = customHandle.collection_names()
+        if "users" not in collection_names:
+            customHandle.create_collection("users")
+        if "order" not in collection_names:
+            customHandle.create_collection("order")
+            writeResponse = customHandle.order.insert({"order": {}})
+        if "questions" not in collection_names:
+            customHandle.create_collection("questions")
     return customHandle
 
 #### HELPER FUNCTIONS ####
@@ -153,10 +161,10 @@ def do_login():
     password = request.form.get("password", None)
     if [username, password] != keys.authKeys():
         return redirect(url_for('login', next=request.url))
-    askiiUser = handle.askii_users.find_one({"username": username})
+    askiiUser = askiiHandle.askii_users.find_one({"username": username})
     if askiiUser == None:
         askiiUser = {"username": username, "key": generateAPIKey(), "dbconfig": {}}
-        handle.askii_users.insert(askiiUser)
+        askiiHandle.askii_users.insert(askiiUser)
     if askiiUser.get("_id", None):
         askiiUser["_id"]=unicode(askiiUser["_id"])
     session["user"]=askiiUser
@@ -166,7 +174,7 @@ def do_login():
 @login_required
 def setup_database():
     config_vars = request.form.to_dict()
-    writeResponse = handle.askii_users.update({"_id": ObjectId(unicode(session["user"]["_id"]))}, {'$set': {"dbconfig": config_vars}})
+    writeResponse = askiiHandle.askii_users.update({"_id": ObjectId(unicode(session["user"]["_id"]))}, {'$set': {"dbconfig": config_vars}})
     if int(writeResponse.get('nModified', 0)) == 0:
         abort(404)
     session["user"]["dbconfig"]=config_vars
