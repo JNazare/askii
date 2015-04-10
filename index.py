@@ -339,6 +339,18 @@ def get_user_by_phone_num(phone_num):
         return jsonify({'user': False})
     return jsonify({'user': make_public_user(user)})
 
+@app.route('/askii/api/v1.0/users/username/<username>', methods=['GET'])
+#@auth.login_required
+def get_user_by_username(username):
+    handle = connectToCustomDB(request.args)
+    if handle == None:
+        abort(404)
+    '''Get a user by phone_num'''
+    user = handle.users.find_one({"username": username})
+    if user == None:
+        return jsonify({'user': False})
+    return jsonify({'user': make_public_user(user)})
+
 @app.route('/askii/api/v1.0/users', methods=['POST'])
 #@auth.login_required
 def create_user():
@@ -346,13 +358,17 @@ def create_user():
     if handle == None:
         abort(404)
     '''Create new user and append to end of user list'''
-    if not request.json or not 'phone_num' in request.json:
+    if not request.json:
         abort(400)
     user = {
-        'phone_num': request.json['phone_num'],
+        'phone_num': request.json.get('phone_num', ""),
+        'username': request.json.get('username', ""),
+        'password': request.json.get("password", ""),
+        'email': request.json.get("email", ""),
         'name': request.json.get('name', ""),
         'questions' : {}
     }
+    print user
     handle.users.insert(user)
     return jsonify({'user': make_public_user(user)}), 201
 
