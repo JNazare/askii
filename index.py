@@ -71,9 +71,9 @@ def make_public_user(user):
             new_user[field] = user[field]
     return new_user
 
-def calculate_difficulty(bool_answer, current_difficulty):
+def calculate_difficulty(num_answer, current_difficulty):
     int_answer = -1
-    if bool_answer == False:
+    if num_answer == 0:
         int_answer = 1
     if current_difficulty >= 3 and int_answer > 0:
         pass
@@ -81,7 +81,6 @@ def calculate_difficulty(bool_answer, current_difficulty):
         pass
     else:
         current_difficulty = current_difficulty + int_answer
-    print current_difficulty
     return current_difficulty
 
 def probabilityOfNewQuestion(prob_new):
@@ -113,12 +112,6 @@ def leitnerBoxSelection(possible_review_questions):
         chosen_question_catagory = np.random.choice(choices, p=weights)
 
     return random.choice(chosen_question_catagory)
-
-def checkRegex(regex_str, answer):
-    regex_obj = re.compile(regex_str, re.IGNORECASE)
-    if regex_obj.search(str(answer)) != None:
-        return True
-    return False
 
 def generateAPIKey():
     return base64.b64encode(hashlib.sha256( str(random.getrandbits(256)) ).digest(), random.choice(['rA','aZ','gQ','hH','hG','aR','DD'])).rstrip('==')
@@ -423,7 +416,6 @@ def answer_question(user_id, question_id):
     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
     user_questions = user["questions"]
     already_answered_question = user_questions.get(question_id, None)
-    regex_eval = False
     updated_question = {}
     if not request.json:
         abort(400)
@@ -432,14 +424,14 @@ def answer_question(user_id, question_id):
     if request.json.get('answer', None) != None:
         answer = int(request.json['answer'])
         if already_answered_question == None:
-            updated_question["difficulty"] = calculate_difficulty(regex_eval, int(question.get("difficulty", 0)))
+            updated_question["difficulty"] = calculate_difficulty(answer, int(question.get("difficulty", 0)))
             updated_question["total_times_answered"] = 1
             if answer == 1:
                 updated_question["total_times_answered_correctly"] = 1
             else:
                 updated_question["total_times_answered_correctly"] = 0
         else:
-            updated_question["difficulty"] = calculate_difficulty(regex_eval, int(already_answered_question["difficulty"]))
+            updated_question["difficulty"] = calculate_difficulty(answer, int(already_answered_question["difficulty"]))
             updated_question["total_times_answered"] = int(already_answered_question["total_times_answered"])+1
             if answer == 1:
                 updated_question["total_times_answered_correctly"] = int(already_answered_question["total_times_answered_correctly"])+1
