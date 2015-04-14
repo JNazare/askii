@@ -174,15 +174,15 @@ def setup_database():
     session["user"]["dbconfig"]=config_vars
     return 'done'
 
-# CONTENT ROUTE
-@app.route('/askii/info/<question_id>', methods=['GET'])
-#@auth.login_required
-def get_info(question_id):
-    question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
-    if question == None:
-        abort(404)
-    question = make_public_question(question)
-    return render_template('info.html', question=question)
+# # CONTENT ROUTE
+# @app.route('/askii/info/<question_id>', methods=['GET'])
+# #@auth.login_required
+# def get_info(question_id):
+#     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+#     if question == None:
+#         abort(404)
+#     question = make_public_question(question)
+#     return render_template('info.html', question=question)
 
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
