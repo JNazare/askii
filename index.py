@@ -12,6 +12,7 @@ import re
 from functools import wraps
 import base64
 import hashlib
+from collections import OrderedDict
 
 ### MONGO CONNECTION ###
 def connect():
@@ -26,6 +27,7 @@ app = Flask(__name__)
 app.secret_key = keys.sessionSecret()
 auth = HTTPBasicAuth()
 askiiHandle = connect()
+numNoRepeat = 3
 
 def connectToCustomDB(request_args):
     # Need to initialize a second DB connection for API creators
@@ -89,8 +91,18 @@ def probabilityOfNewQuestion(prob_new):
     choices, weights = zip(*weighted_choices)
     return np.random.choice(choices, p=weights)
 
+def findRecentlyAnswered(possible_review_questions):
+    od = list(OrderedDict(sorted(possible_review_questions.items(),key = lambda x :x[1]['time_question_last_seen'],reverse = True)))
+    od = od[0:numNoRepeat]
+    return od
+
 def leitnerBoxSelection(possible_review_questions):
-    
+
+    recently_answered_questions = set(findRecentlyAnswered(possible_review_questions))
+
+    for recent in recently_answered_questions:
+        del possible_review_questions[recent]
+
     easy_weight = 0.1
     medium_weight = 0.2
     hard_weight = 0.3
