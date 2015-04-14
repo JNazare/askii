@@ -98,8 +98,6 @@ def findRecentlyAnswered(possible_review_questions):
 
 def leitnerBoxSelection(possible_review_questions):
 
-    recently_answered_questions = set(findRecentlyAnswered(possible_review_questions))
-
     for recent in recently_answered_questions:
         del possible_review_questions[recent]
 
@@ -475,7 +473,7 @@ def get_next_question(user_id):
     already_answered_questions = set(user_questions.keys())
     unanswered_questions = [q for q in order_list if q not in already_answered_questions]
     # need to get the set of questions that are in order but not in the review dictionary
-    if int(request.json.get('count', 0)) == 0 and len(unanswered_questions) != 0:
+    if int(request.json.get('count', 0)) <= 0 and len(unanswered_questions) != 0:
         # first question of the session, new question is required
         question_id = unanswered_questions[0]
         question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
@@ -483,7 +481,9 @@ def get_next_question(user_id):
             abort(404)
     elif len(unanswered_questions) != 0:
         # not the first question and there are still new questions, can get either a new or review question
-        type_question = probabilityOfNewQuestion(0.5)
+        type_question = True
+        if len(user_questions) >= numNoRepeat:
+            type_question = probabilityOfNewQuestion(0.5)
         if type_question == True:
             question_id = unanswered_questions[0]
             question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
