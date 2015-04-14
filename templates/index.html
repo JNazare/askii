@@ -25,7 +25,9 @@
                   <p class="formattedParagraph">
                     <strong> Current Configuration </strong>
                     <br>
-                    {{user.dbconfig}}
+                    {% for key, value in user.dbconfig.iteritems() %}
+                      {{key | capitalize}}: {{value}} <br>
+                    {% endfor %}
                   </p>
                 {% endif %}
                 <form>
