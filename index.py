@@ -12,7 +12,6 @@ import re
 from functools import wraps
 import base64
 import hashlib
-from collections import OrderedDict
 
 ### MONGO CONNECTION ###
 def connect():
@@ -27,7 +26,6 @@ app = Flask(__name__)
 app.secret_key = keys.sessionSecret()
 auth = HTTPBasicAuth()
 askiiHandle = connect()
-numNoRepeat = 3
 
 def connectToCustomDB(request_args):
     # Need to initialize a second DB connection for API creators
@@ -91,16 +89,8 @@ def probabilityOfNewQuestion(prob_new):
     choices, weights = zip(*weighted_choices)
     return np.random.choice(choices, p=weights)
 
-def findRecentlyAnswered(possible_review_questions):
-    od = list(OrderedDict(sorted(possible_review_questions.items(),key = lambda x :x[1]['time_question_last_seen'],reverse = True)))
-    od = od[0:numNoRepeat]
-    return od
-
 def leitnerBoxSelection(possible_review_questions):
-
-    for recent in recently_answered_questions:
-        del possible_review_questions[recent]
-
+    
     easy_weight = 0.1
     medium_weight = 0.2
     hard_weight = 0.3
@@ -184,15 +174,15 @@ def setup_database():
     session["user"]["dbconfig"]=config_vars
     return 'done'
 
-# # CONTENT ROUTE
-# @app.route('/askii/info/<question_id>', methods=['GET'])
-# #@auth.login_required
-# def get_info(question_id):
-#     question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
-#     if question == None:
-#         abort(404)
-#     question = make_public_question(question)
-#     return render_template('info.html', question=question)
+# CONTENT ROUTE
+@app.route('/askii/info/<question_id>', methods=['GET'])
+#@auth.login_required
+def get_info(question_id):
+    question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
+    if question == None:
+        abort(404)
+    question = make_public_question(question)
+    return render_template('info.html', question=question)
 
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
@@ -473,7 +463,7 @@ def get_next_question(user_id):
     already_answered_questions = set(user_questions.keys())
     unanswered_questions = [q for q in order_list if q not in already_answered_questions]
     # need to get the set of questions that are in order but not in the review dictionary
-    if int(request.json.get('count', 0)) <= 0 and len(unanswered_questions) != 0:
+    if int(request.json.get('count', 0)) == 0 and len(unanswered_questions) != 0:
         # first question of the session, new question is required
         question_id = unanswered_questions[0]
         question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
@@ -481,9 +471,7 @@ def get_next_question(user_id):
             abort(404)
     elif len(unanswered_questions) != 0:
         # not the first question and there are still new questions, can get either a new or review question
-        type_question = True
-        if len(user_questions) >= numNoRepeat:
-            type_question = probabilityOfNewQuestion(0.5)
+        type_question = probabilityOfNewQuestion(0.5)
         if type_question == True:
             question_id = unanswered_questions[0]
             question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
