@@ -12,6 +12,7 @@ import re
 from functools import wraps
 import base64
 import hashlib
+from collections import OrderedDict
 
 ### MONGO CONNECTION ###
 def connect():
@@ -26,6 +27,7 @@ app = Flask(__name__)
 app.secret_key = keys.sessionSecret()
 auth = HTTPBasicAuth()
 askiiHandle = connect()
+dontShowRepeat = 3
 
 def connectToCustomDB(request_args):
     # Need to initialize a second DB connection for API creators
@@ -88,6 +90,12 @@ def probabilityOfNewQuestion(prob_new):
     weighted_choices = [(True, prob_new), (False, prob_review)]
     choices, weights = zip(*weighted_choices)
     return np.random.choice(choices, p=weights)
+
+def removeLastSeenQuestions(questions):
+    ordered_questions = OrderedDict(sorted(questions.items(), key=lambda t: t[1]["time_question_last_seen"]))
+    for i in range(dontShowRepeat):
+        ordered_questions.popitem()
+    return ordered_questions
 
 def leitnerBoxSelection(possible_review_questions):
     
@@ -479,7 +487,9 @@ def get_next_question(user_id):
                 abort(404)
         else:
             # review question, use leitner box
-            if len(user_questions) != 0:
+            if len(user_questions) > dontShowRepeat:
+                # print user_questions
+                user_questions = removeLastSeenQuestions(user_questions)
                 question_id = leitnerBoxSelection(user_questions)
                 question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
                 if question == None:
@@ -491,7 +501,9 @@ def get_next_question(user_id):
                     abort(404) 
     else:
         # treat all questions as review questions... no themes yet
-        if len(user_questions) != 0:
+        if len(user_questions) > dontShowRepeat:
+            # print user_questions
+            user_questions = removeLastSeenQuestions(user_questions)
             question_id = leitnerBoxSelection(user_questions)
             question = handle.questions.find_one({"_id": ObjectId(unicode(question_id))})
             if question == None:
