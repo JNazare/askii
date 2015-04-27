@@ -13,6 +13,7 @@ from functools import wraps
 import base64
 import hashlib
 from collections import OrderedDict
+from flask.ext.cors import CORS, cross_origin
 
 ### MONGO CONNECTION ###
 def connect():
@@ -24,6 +25,7 @@ def connect():
 
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/askii/api/*": {"supports_credentials": True}})
 app.secret_key = keys.sessionSecret()
 auth = HTTPBasicAuth()
 askiiHandle = connect()
