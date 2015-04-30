@@ -201,8 +201,15 @@ def get_questions():
     handle = connectToCustomDB(request.args)
     if handle == None:
         abort(404)
+    print request.args
+    creator = request.args.get("creator", None)
+    if creator:
+        query = {"creator": creator}
+        questions = handle.questions.find(query)
+    else:
+        questions = handle.questions.find()
     '''Get a list of all questions'''
-    return jsonify({'questions': [make_public_question(question) for question in handle.questions.find()]})
+    return jsonify({'questions': [make_public_question(question) for question in questions]})
 
 @app.route('/askii/api/v1.0/questions/<question_id>', methods=['GET'])
 #@auth.login_required
@@ -468,6 +475,12 @@ def get_next_question(user_id):
     order_obj = handle.order.find()[0]
     order_id = order_obj["_id"]
     order_list = order_obj["order"]
+
+    creator = request.args.get("creator", None)
+    if creator:
+        query = {"creator": creator}
+        order_list = handle.questions.find(query)
+
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
     user_questions = user["questions"]
     already_answered_questions = set(user_questions.keys())
