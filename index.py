@@ -214,7 +214,7 @@ def get_questions():
     handle = connectToCustomDB(request.args)
     if handle == None:
         abort(404)
-    print request.args
+    # print request.args
     creator = request.args.get("creator", None)
     if creator:
         query = {"creator": creator}
@@ -316,7 +316,7 @@ def delete_question(question_id):
     '''Delete a question by _id'''
     user_id = request.args.get("creator", None)
     if user_id:
-        print user_id, question_id
+        # print user_id, question_id
         user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
         user_questions = user["questions"]
         deleted = user_questions.pop(question_id, 0)
@@ -401,7 +401,7 @@ def create_user():
         'name': request.json.get('name', ""),
         'questions' : {}
     }
-    print user
+    # print user
     handle.users.insert(user)
     return jsonify({'user': make_public_user(user)}), 201
 
@@ -498,16 +498,16 @@ def get_next_question(user_id):
     order_obj = handle.order.find()[0]
     order_id = order_obj["_id"]
     order_list = order_obj["order"]
-    print 'order'
-    print order_list
+    # print 'order'
+    # print order_list
 
     creator = request.args.get("creator", None)
     if creator:
         query = {"creator": creator}
         order_list = handle.questions.find(query)
-        print 'query'
+        # print 'query'
         order_list = [unicode(question["_id"]) for question in order_list]
-        print order_list
+        # print order_list
 
     user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
     user_questions = user["questions"]
