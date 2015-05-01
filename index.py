@@ -314,6 +314,16 @@ def delete_question(question_id):
     if handle == None:
         abort(404)
     '''Delete a question by _id'''
+    user_id = request.args.get("creator", None)
+    if user_id:
+        print user_id, question_id
+        user = handle.users.find_one({"_id": ObjectId(unicode(user_id))})
+        user_questions = user["questions"]
+        deleted = user_questions.pop(question_id, 0)
+        if deleted != 0:
+            writeResponse = handle.users.update({"_id": ObjectId(unicode(user_id))}, {'$set': {"questions": user_questions}})
+            if int(writeResponse.get('nModified', 0)) == 0:
+                abort(404)
     order_obj = handle.order.find()[0]
     order_id = order_obj["_id"]
     order_list = order_obj["order"]
