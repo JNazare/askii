@@ -2,6 +2,7 @@
 from flask import Flask, jsonify, abort, make_response, request, url_for, render_template, redirect, session
 from flask.ext.httpauth import HTTPBasicAuth
 import os
+import urllib2
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import keys
@@ -193,6 +194,18 @@ def get_info(question_id):
         abort(404)
     question = make_public_question(question)
     return render_template('info.html', question=question)
+
+# TRANSLATION ROUTE
+@app.route("/askii/api/v1.0/<translate_from>/<translate_to>/<word>", methods=['GET'])
+def translate(translate_from, translate_to, word):
+    agents = {'User-Agent':"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30)"}
+    before_trans = 'class="t0">'
+    link = "http://translate.google.com/m?hl=%s&sl=%s&q=%s" % (translate_to, translate_from, word.replace(" ", "+"))
+    request = urllib2.Request(link, headers=agents)
+    page = urllib2.urlopen(request).read()
+    result = page[page.find(before_trans)+len(before_trans):]
+    result = result.split("<")[0]
+    return result
 
 # QUESTION ROUTES [DATA ENTRY]
 @app.route('/askii/api/v1.0/questions', methods=['GET'])
